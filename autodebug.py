@@ -2,15 +2,23 @@ import openai
 import os
 import subprocess
 import sys
+import json
 
-openai.api_key = os.environ.get("OPENAI_API_KEY")
+config = json.load(open('config.json'))
+
+openai.api_key = config["OPENAI_API_KEY"]
 
 def run_python_file(filename):
-    try:
-        output = subprocess.check_output(["python3", filename])
-        return True, output
-    except subprocess.CalledProcessError as e:
-        return False, e.output
+    process = subprocess.Popen(["python3", "-u", filename], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    while True:
+        output = process.stdout.readline()
+        if output == b'' and process.poll() is not None:
+            break
+        if output:
+            print(output.strip().decode("utf-8"))
+    rc = process.poll()
+    return rc == 0, output
+
 
 def fix_python_code(code, error_output):
     response = openai.ChatCompletion.create(
